@@ -1,5 +1,5 @@
 const $ = selector => document.querySelector(selector);
-const state = { user: null, shops: [], reservations: [], editing: null, deleting: null, register: false, style: '' };
+const state = { user: null, shops: [], reservations: [], editing: null, deleting: null, register: false, style: '', availabilityRequest: 0, line: null, detailShop: null };
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const today = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
 $('#booking-form').elements.apptDate.min = today();
@@ -47,7 +47,9 @@ async function api(path, method = 'GET', body) {
     if (response.status === 401 && state.user) {
       state.user = null; state.reservations = []; resetBooking(); renderAccount(); renderReservations();
     }
-    throw new Error(result.message || 'Unable to complete the request. Please try again.');
+    const error = new Error(result.message || 'Unable to complete the request. Please try again.');
+    error.status = response.status;
+    throw error;
   }
   return result;
 }
@@ -82,7 +84,7 @@ function renderAccount() {
   $('#admin-panel').hidden = state.user?.role !== 'admin';
   $('#reservation-heading').textContent = state.user?.role === 'admin' ? 'All reservations' : 'Good moments, coming up.';
   $('#reservation-description').textContent = state.user?.role === 'admin' ? 'View, edit, or delete a reservation for any user.' : 'Your reservations, with room for a change of plans.';
-  updateQuota();
+  updateQuota(); renderLine();
 }
 function updateQuota() {
   const count = state.reservations.filter(r => (r.user?._id || r.user) === state.user?._id).length;
@@ -120,10 +122,8 @@ function renderShops() {
     if (shop.tel) telephone.href = `tel:${shop.tel.replace(/[^+\d]/g, '')}`;
     const hours = node('span'); hours.append(icon('clock'), node('span', `${shop.openTime}–${shop.closeTime}`));
     contact.append(hours, telephone); info.append(contact);
-    const choose = action(selected ? 'Selected' : 'Choose this shop', () => {
-      $('#booking-shop').value = shop._id;
-      syncSelectedShop(); renderShops(); revealBooking();
-    }, selected ? 'shop-choose is-selected' : 'shop-choose');
+    info.append(node('p', licenseText(shop), 'license'), action('View details & license', () => showShopDetails(shop), 'text-button shop-more'));
+    const choose = action(selected ? 'Selected' : 'Choose this shop', () => chooseShop(shop._id), selected ? 'shop-choose is-selected' : 'shop-choose');
     choose.append(icon(selected ? 'check' : 'arrow'));
     choose.setAttribute('aria-label', `${selected ? 'Selected' : 'Choose this shop'}: ${shop.name}`);
     choose.setAttribute('aria-pressed', String(selected));
@@ -150,6 +150,7 @@ function syncSelectedShop() {
   $('#selected-shop').hidden = !shop;
   $('#selected-shop-name').textContent = shop?.name || '';
   $('#selected-shop-details').textContent = shop ? `${shop.neighborhood ? `${shop.neighborhood} · ` : ''}${shop.openTime}–${shop.closeTime}` : '';
+  $('#selected-shop-license').textContent = shop ? licenseText(shop) : '';
 }
 async function loadShops() {
   $('#shop-list').setAttribute('aria-busy', 'true');
@@ -174,10 +175,15 @@ function renderReservations() {
   for (const reservation of state.reservations) {
     const row = node('article', '', 'reservation-row');
     const date = new Date(`${reservation.apptDate}T12:00:00+07:00`);
-    row.append(node('div', date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' }), 'reservation-date'));
+    const when = node('div', date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' }), 'reservation-date');
+    when.append(node('span', reservation.startTime ? `${reservation.startTime}–${periodEnd(reservation.startTime)}` : 'No time selected', 'reservation-time'));
+    if (reservation.queueNumber) when.append(node('span', `Queue #${reservation.queueNumber}`, 'queue-number'));
+    row.append(when);
     const info = node('div'); info.append(node('h3', reservation.shop?.name || 'Shop unavailable'));
     if (reservation.shop) info.append(node('p', reservation.shop.address), node('p', `${reservation.shop.openTime}–${reservation.shop.closeTime} · ${reservation.shop.tel}`));
+    if (reservation.shop) info.append(node('p', licenseText(reservation.shop), 'license'));
     if (state.user.role === 'admin') info.append(node('p', `Guest: ${reservation.user?.name || 'Deleted user'} · ${reservation.user?.email || ''} · ${reservation.user?.tel || ''}`));
+    if (reservation.notes) { const notes = node('p', '', 'reservation-notes'); notes.append(node('strong', 'Notes: '), node('span', reservation.notes)); info.append(notes); }
     const actions = node('div', '', 'row-actions');
     actions.append(action('Edit', () => editReservation(reservation)), action('Delete', () => {
       state.deleting = reservation._id; $('#delete-error').textContent = ''; $('#delete-dialog').showModal(); $('#keep-reservation').focus();
@@ -192,17 +198,18 @@ async function loadReservations() {
 }
 function resetBooking() {
   state.editing = null; $('#booking-form').reset(); $('#booking-error').textContent = '';
-  $('#booking-heading').textContent = 'Make it a date.'; $('#booking-description').textContent = 'A little time for you, in just two choices.';
+  $('#booking-heading').textContent = 'Make it a date.'; $('#booking-description').textContent = 'A little time for you, in just a few choices.';
   $('#booking-submit').textContent = 'Reserve a massage'; $('#cancel-edit').hidden = true; updateQuota();
-  syncSelectedShop(); renderShops();
+  syncSelectedShop(); renderShops(); updateNotesCount(); loadAvailability();
 }
 function editReservation(reservation) {
   state.editing = reservation._id;
   $('#booking-shop').value = reservation.shop?._id || '';
   $('#booking-form').elements.apptDate.value = reservation.apptDate;
+  $('#booking-form').elements.notes.value = reservation.notes || ''; updateNotesCount();
   $('#booking-heading').textContent = 'Edit reservation'; $('#booking-description').textContent = 'Choose a different shop or date, then save your changes.';
   $('#booking-submit').textContent = 'Save changes'; $('#cancel-edit').hidden = false; $('#booking-error').textContent = '';
-  updateQuota(); syncSelectedShop(); renderShops();
+  updateQuota(); syncSelectedShop(); renderShops(); loadAvailability(reservation.startTime || '');
   $('#booking').scrollIntoView({ behavior: reducedMotion.matches ? 'instant' : 'smooth', block: 'nearest' }); $('#booking-shop').focus({ preventScroll: true });
 }
 $('#auth-switch').addEventListener('click', () => {
@@ -218,7 +225,7 @@ $('#auth-switch').addEventListener('click', () => {
 $('#auth-form').addEventListener('submit', event => {
   event.preventDefault(); submitting(event.target, '#auth-error', async () => {
     await api(`/auth/${state.register ? 'register' : 'login'}`, 'POST', Object.fromEntries(new FormData(event.target)));
-    state.user = (await api('/auth/me')).data; event.target.reset(); renderAccount(); await loadReservations(); notice(`Welcome, ${state.user.name}. You’re ready to reserve.`);
+    state.user = (await api('/auth/me')).data; event.target.reset(); renderAccount(); await loadReservations(); loadLine(); notice(`Welcome, ${state.user.name}. You’re ready to reserve.`);
     if ($('#booking-shop').value) revealBooking();
   });
 });
@@ -233,7 +240,12 @@ $('#booking-form').addEventListener('submit', event => {
     if (!state.user) { notice('Your choices are saved on this page. Log in or create an account to finish your reservation.'); $('#auth-form').elements.email.focus(); return; }
   submitting(event.target, '#booking-error', async () => {
     const editing = state.editing;
-    await api(editing ? `/reservations/${editing}` : '/reservations', editing ? 'PUT' : 'POST', Object.fromEntries(new FormData(event.target)));
+    try {
+      await api(editing ? `/reservations/${editing}` : '/reservations', editing ? 'PUT' : 'POST', Object.fromEntries(new FormData(event.target)));
+    } catch (error) {
+      if (error.status === 409) await loadAvailability();
+      throw error;
+    }
     resetBooking(); await loadReservations(); notice(editing ? 'All set. Your reservation has been updated.' : 'A little time for you, officially reserved. Find your booking below.', false, !editing);
     $('#notice').scrollIntoView({ behavior: reducedMotion.matches ? 'instant' : 'smooth', block: 'nearest' });
   });
@@ -250,18 +262,143 @@ $('#confirm-delete').addEventListener('click', async () => {
   finally { $('#confirm-delete').disabled = false; }
 });
 $('#shop-search').addEventListener('input', renderShops);
-$('#booking-shop').addEventListener('change', () => { syncSelectedShop(); renderShops(); });
+$('#booking-shop').addEventListener('change', () => { syncSelectedShop(); renderShops(); loadAvailability(); });
+$('#booking-form').elements.apptDate.addEventListener('change', () => loadAvailability());
+$('#booking-notes').addEventListener('input', updateNotesCount);
 $('#refresh-shops').addEventListener('click', async () => { try { await loadShops(); notice('Shop list refreshed.'); } catch (error) { notice(error.message, true); } });
 $('#refresh-reservations').addEventListener('click', async () => { try { await loadReservations(); notice(state.user ? 'Reservations refreshed.' : 'Log in to see your reservations.'); } catch (error) { notice(error.message, true); } });
 $('#shop-form').addEventListener('submit', event => {
   event.preventDefault(); submitting(event.target, '#shop-error', async () => {
-    await api('/shops', 'POST', Object.fromEntries(new FormData(event.target))); event.target.reset(); await loadShops(); notice('Massage shop added.');
+    const shop = Object.fromEntries([...new FormData(event.target)].filter(([, value]) => value !== ''));
+    if (shop.capacity) shop.capacity = Number(shop.capacity);
+    await api('/shops', 'POST', shop); event.target.reset(); await loadShops(); notice('Massage shop added.');
   });
 });
 async function initialize() {
   try { state.user = (await api('/auth/me')).data; } catch (error) { if (!/log in|session/i.test(error.message)) notice(error.message, true); }
-  renderAccount();
+  renderAccount(); showLineResult(); loadLine();
   try { await loadShops(); } catch (error) { $('#shop-count').textContent = 'The shop list couldn’t load.'; $('#shop-list').replaceChildren(node('p', `${error.message}. Use Refresh shops to try again.`, 'error')); }
   try { await loadReservations(); } catch (error) { notice(error.message, true); }
 }
+
+// ---- AR1: time-slot availability -------------------------------------------------------------
+function periodEnd(start) {
+  const minutes = Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5)) + 60;
+  return `${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+function chooseShop(id) {
+  $('#booking-shop').value = id;
+  syncSelectedShop(); renderShops(); revealBooking(); loadAvailability();
+}
+async function loadAvailability(preferred) {
+  const form = $('#booking-form');
+  const shop = form.elements.shop.value; const date = form.elements.apptDate.value;
+  const current = preferred ?? form.querySelector('input[name="startTime"]:checked')?.value ?? '';
+  const request = ++state.availabilityRequest;
+  const list = $('#slot-list'); list.replaceChildren();
+  if (!shop || !date) { $('#slot-help').textContent = 'Choose a shop and a day to see open times.'; return; }
+  $('#slot-help').textContent = 'Checking open times…'; list.setAttribute('aria-busy', 'true');
+  try {
+    const exclude = state.editing ? `&exclude=${encodeURIComponent(state.editing)}` : '';
+    const result = await api(`/shops/${encodeURIComponent(shop)}/availability?date=${encodeURIComponent(date)}${exclude}`);
+    if (request === state.availabilityRequest) renderSlots(result.data, current);
+  } catch (error) {
+    if (request === state.availabilityRequest) $('#slot-help').textContent = error.message;
+  } finally {
+    if (request === state.availabilityRequest) list.removeAttribute('aria-busy');
+  }
+}
+function renderSlots(slots, current) {
+  const list = $('#slot-list'); list.replaceChildren();
+  for (const slot of slots) {
+    const label = node('label', '', 'slot-option');
+    const input = document.createElement('input');
+    Object.assign(input, { type: 'radio', name: 'startTime', value: slot.start, required: true, disabled: !slot.available, checked: slot.available && slot.start === current });
+    label.dataset.full = String(!slot.available);
+    label.append(input, node('span', `${slot.start}–${slot.end}`, 'slot-time'),
+      node('span', slot.available ? `(${slot.remaining} ${slot.remaining === 1 ? 'slot' : 'slots'} available)` : '(Fully booked)', 'slot-remaining'));
+    list.append(label);
+  }
+  const help = $('#slot-help');
+  if (!slots.length) help.textContent = 'No open times left on this day. Try another day.';
+  else if (slots.every(slot => !slot.available)) help.textContent = 'Every time on this day is fully booked. Try another day or shop.';
+  else if (current && !list.querySelector('input:checked') && slots.some(slot => slot.start === current)) help.textContent = `${current}–${periodEnd(current)} is now fully booked. Please choose another time.`;
+  else help.textContent = 'Each time is 60 minutes, in Thailand time. Fully booked times cannot be selected.';
+}
+
+// ---- AR2: notes --------------------------------------------------------------------------------
+function updateNotesCount() { $('#notes-count').textContent = String($('#booking-notes').value.length); }
+
+// ---- AR3: Health Establishment License -----------------------------------------------------------
+function formatDay(date) { return new Date(`${date}T12:00:00+07:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' }); }
+function licenseText(shop) {
+  if (!shop.licenseNumber) return 'Health Establishment License: not yet provided';
+  const expiry = shop.licenseExpiresAt ? ` · valid until ${formatDay(shop.licenseExpiresAt)}${shop.licenseExpiresAt < today() ? ' (expired)' : ''}` : '';
+  return `Health Establishment License: ${shop.licenseNumber}${expiry}`;
+}
+function showShopDetails(shop) {
+  state.detailShop = shop._id;
+  $('#shop-dialog-heading').textContent = shop.name;
+  const rows = [
+    ['Address', shop.address],
+    ...(shop.neighborhood ? [['Neighborhood', shop.neighborhood]] : []),
+    ['Telephone', shop.tel],
+    ['Opening hours', `${shop.openTime}–${shop.closeTime} (Thailand time)`],
+    ['Guests per hour', String(shop.capacity ?? 3)],
+    ['Health Establishment License (ใบอนุญาตสถานประกอบการเพื่อสุขภาพ)', shop.licenseNumber || 'Not yet provided'],
+    ...(shop.licenseExpiresAt ? [['License valid until', `${formatDay(shop.licenseExpiresAt)}${shop.licenseExpiresAt < today() ? ' (expired)' : ''}`]] : []),
+  ];
+  const list = $('#shop-dialog-details'); list.replaceChildren();
+  rows.forEach(([term, value]) => list.append(node('dt', term), node('dd', value)));
+  $('#shop-dialog').showModal(); $('#shop-dialog-close').focus();
+}
+$('#shop-dialog-close').addEventListener('click', () => $('#shop-dialog').close());
+$('#shop-dialog-choose').addEventListener('click', () => { $('#shop-dialog').close(); chooseShop(state.detailShop); });
+
+// ---- AR6: LINE account linking --------------------------------------------------------------------
+const LINE_RESULTS = {
+  linked: ['LINE linked. Add our LINE Official Account as a friend so confirmations and reminders can reach you.', false],
+  cancelled: ['LINE linking was cancelled. Your account is unchanged.', true],
+  invalid: ['That LINE link request could not be verified. Please try Link LINE again.', true],
+  expired: ['That LINE link request expired. Please try Link LINE again.', true],
+  taken: ['That LINE account is already linked to another user.', true],
+  error: ['LINE could not confirm your account. Please try again.', true],
+  unavailable: ['LINE linking is not set up on this server yet.', true],
+};
+function showLineResult() {
+  const params = new URLSearchParams(location.search);
+  const result = params.get('line');
+  if (!result) return;
+  params.delete('line');
+  history.replaceState(null, '', `${location.pathname}${params.size ? `?${params}` : ''}${location.hash}`);
+  if (LINE_RESULTS[result]) notice(...LINE_RESULTS[result]);
+}
+async function loadLine() {
+  if (!state.user) { state.line = null; renderLine(); return; }
+  try { state.line = (await api('/line/status')).data; } catch { state.line = null; }
+  renderLine();
+}
+function renderLine() {
+  const status = $('#line-status'); const button = $('#line-link');
+  const show = !!state.user && !!state.line;
+  status.hidden = !show; button.hidden = !show;
+  if (!show) return;
+  status.dataset.linked = String(state.line.linked);
+  status.replaceChildren(node('span', state.line.linked ? 'LINE linked' : 'LINE not linked'));
+  if (state.line.linked && /^https:\/\/(lin\.ee|line\.me)\//.test(state.line.addFriendUrl || '')) {
+    const friend = node('a', 'Add our LINE OA'); friend.href = state.line.addFriendUrl; friend.target = '_blank'; friend.rel = 'noopener';
+    status.append(' · ', friend);
+  }
+  button.textContent = state.line.linked ? 'Unlink LINE' : 'Link LINE';
+  button.disabled = !state.line.linked && state.line.loginMode === 'off';
+  button.title = button.disabled ? 'LINE linking is not set up on this server yet' : '';
+}
+$('#line-link').addEventListener('click', async () => {
+  if (!state.line?.linked) { window.location.assign('/api/v1/line/login'); return; }
+  $('#line-link').disabled = true;
+  try { await api('/line/link', 'DELETE'); notice('LINE unlinked. You will no longer receive LINE messages.'); await loadLine(); }
+  catch (error) { notice(error.message, true); }
+  finally { $('#line-link').disabled = false; }
+});
+
 initialize();

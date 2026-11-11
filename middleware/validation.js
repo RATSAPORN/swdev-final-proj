@@ -17,4 +17,18 @@ function reservationDate(value) {
   if (value < today) fail(400, 'Choose today or a future date (Thailand time)');
   return value;
 }
-module.exports = { fail, fields, id, reservationDate };
+// AR1: start of a 60-minute period, HH:mm.
+function startTime(value) {
+  if (typeof value !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) fail(400, 'startTime is required, in HH:mm (for example 10:00)');
+  return value;
+}
+// AR2: optional notes; trimmed and limited to NOTES_MAX characters.
+const NOTES_MAX = 1000;
+function notes(value) {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string') fail(400, 'Notes must be text');
+  const trimmed = value.trim();
+  if (trimmed.length > NOTES_MAX) fail(400, `Notes must be ${NOTES_MAX} characters or fewer`);
+  return trimmed;
+}
+module.exports = { fail, fields, id, reservationDate, startTime, notes, NOTES_MAX };
