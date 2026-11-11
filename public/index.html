@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#285442">
+  <title>Massage Reservation</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="header">
+    <a class="brand" href="/">Massage <span>Reservation</span></a>
+    <nav aria-label="Main navigation"><a href="#shops">Find a shop</a><a href="#reservations">Reservations</a></nav>
+    <div class="account"><span id="account-name">Guest</span><button id="logout" class="secondary" hidden>Log out</button><a id="login-link" href="#account">Log in</a></div>
+  </header>
+  <main id="main">
+    <section class="intro">
+      <h1>A little time<br>for yourself.</h1>
+      <p>Find a massage shop, choose your date, and make room to unwind. Keep up to three reservations in one place.</p>
+    </section>
+    <div id="notice" role="status" aria-live="polite" hidden></div>
+    <section id="account" class="account-panel" aria-labelledby="account-heading">
+      <div><h2 id="account-heading">Welcome back</h2><p id="auth-description">Log in to book and manage your reservations.</p><button id="auth-switch" class="text-button">New here? Create an account</button></div>
+      <form id="auth-form">
+        <label class="register-field" hidden>Full name<input name="name" autocomplete="name" maxlength="100" disabled></label>
+        <label class="register-field" hidden>Telephone number<input name="tel" type="tel" autocomplete="tel" placeholder="0812345678" disabled></label>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" minlength="6" required></label>
+        <button id="auth-submit" type="submit">Log in</button>
+        <p id="auth-error" class="error" role="alert"></p>
+      </form>
+    </section>
+    <div class="workspace">
+      <section id="shops" aria-labelledby="shops-heading">
+        <div class="section-top"><div><h2 id="shops-heading">Find your place to unwind</h2><p>Shop details and opening hours, all in one view.</p></div><button id="refresh-shops" class="secondary">Refresh shops</button></div>
+        <label class="search">Search shops<input id="shop-search" type="search" placeholder="Shop name or address"></label>
+        <div id="shop-list" aria-live="polite"><p>Loading shops…</p></div>
+      </section>
+      <aside id="booking" class="booking" aria-labelledby="booking-heading">
+        <h2 id="booking-heading">Your next pause</h2>
+        <p id="booking-description">Choose a shop from the list to get started.</p>
+        <form id="booking-form">
+          <label>Massage shop<select name="shop" id="booking-shop" required><option value="">Choose a shop</option></select></label>
+          <label>Reservation date<input name="apptDate" type="date" required></label>
+          <p class="hint">Dates follow Thailand time. Opening hours are shown in the shop details.</p>
+          <button id="booking-submit" type="submit">Reserve a massage</button>
+          <button id="cancel-edit" type="button" class="secondary" hidden>Cancel editing</button>
+          <p id="booking-error" class="error" role="alert"></p>
+        </form>
+        <p id="quota" class="quota">Log in to make a reservation.</p>
+      </aside>
+    </div>
+    <section id="reservations" class="reservations" aria-labelledby="reservation-heading">
+      <div class="section-top"><div><h2 id="reservation-heading">Your reservations</h2><p id="reservation-description">Your plans, with space to change them.</p></div><button id="refresh-reservations" class="secondary">Refresh reservations</button></div>
+      <div id="reservation-list" aria-live="polite"><p class="empty">Log in to see your reservations.</p></div>
+    </section>
+    <details id="admin-panel" hidden>
+      <summary>Add a massage shop</summary>
+      <form id="shop-form" class="shop-form">
+        <label>Shop name<input name="name" required maxlength="100"></label>
+        <label>Address<input name="address" required maxlength="500"></label>
+        <label>Telephone<input name="tel" type="tel" required></label>
+        <label>Opens at<input name="openTime" type="time" required></label>
+        <label>Closes at<input name="closeTime" type="time" required></label>
+        <button type="submit">Add shop</button><p id="shop-error" class="error" role="alert"></p>
+      </form>
+    </details>
+  </main>
+  <footer><span>Massage Reservation</span><span>Make time for a slower moment.</span></footer>
+  <dialog id="delete-dialog" aria-labelledby="delete-heading">
+    <h2 id="delete-heading">Delete this reservation?</h2><p>This frees a place for another booking. You can make a new reservation whenever you’re ready.</p>
+    <div class="dialog-actions"><button id="keep-reservation" class="secondary">Keep reservation</button><button id="confirm-delete" class="danger">Delete reservation</button></div><p id="delete-error" class="error" role="alert"></p>
+  </dialog>
+</body>
+</html>
