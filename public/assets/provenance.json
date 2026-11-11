@@ -1,0 +1,11 @@
+{
+  "asset": "spa-moment.webp",
+  "kind": "AI-generated decorative spa still-life; not a photo of a listed shop",
+  "tool": "built-in image_gen",
+  "prompt": "Use case: photorealistic-natural. Asset type: decorative photo for a massage reservation web app, not a photograph of any listed business. Create an editorial still-life photograph in a warm sunlit spa: two neatly rolled white cotton towels on an ivory limestone shelf, a small amber massage oil bottle, a shallow bowl with smooth river stones, one branch of fresh green leaves softly entering from the side. Background is softly defocused sage-green garden visible through a window. Natural oblique morning sunlight with soft leaf shadows, warm whites, moss green, honey amber. Modern, welcoming, deeply peaceful, authentic fine textures and restrained arrangement, no people. Landscape 3:2 composition with subject mainly center-right and beautiful negative space. No text, no logo, no watermark. This is a final web photo asset, not a UI mockup.",
+  "font": {
+    "name": "Cormorant Garamond",
+    "source": "https://github.com/google/fonts/tree/main/ofl/cormorantgaramond",
+    "license": "OFL-cormorant.txt"
+  }
+}
