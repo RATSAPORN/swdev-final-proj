@@ -287,3 +287,40 @@ dialog::backdrop { background: #192b2370; }
 @media (max-height: 760px) {
   .booking { position: static; }
 }
+
+/* ---- Additional requirements (AR1–AR6) ---- */
+textarea { width: 100%; min-height: 104px; margin-top: 7px; padding: 11px 13px; border: 1px solid #a4b29e; border-radius: 8px; color: var(--ink); background: var(--surface); font: inherit; font-size: .9rem; resize: vertical; caret-color: var(--accent); }
+textarea:hover { border-color: var(--accent); }
+textarea::placeholder { color: #69776c; font-size: .82rem; }
+.optional { color: var(--muted); font-weight: 400; }
+/* AR1: time periods */
+.slot-field { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.slot-field legend { padding: 0; margin-bottom: 7px; font-size: .83rem; font-weight: 600; }
+.slot-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.slot-list[aria-busy='true'] { opacity: .6; }
+.slot-option { display: grid; gap: 1px; min-height: 48px; padding: 8px 12px 8px 36px; position: relative; border: 1px solid #a4b29e; border-radius: 8px; background: var(--surface); font-variant-numeric: tabular-nums; cursor: pointer; }
+.slot-option:hover { border-color: var(--accent); }
+.slot-option input { position: absolute; left: 12px; top: 13px; width: 16px; height: 16px; min-height: 0; margin: 0; padding: 0; accent-color: var(--accent); }
+.slot-option:has(input:checked) { border-color: var(--accent); background: var(--tint); box-shadow: inset 0 0 0 1px var(--accent); }
+.slot-option:has(input:focus-visible) { outline: 3px solid #a15f37; outline-offset: 2px; }
+.slot-time { font-size: .88rem; font-weight: 650; }
+.slot-remaining { color: var(--accent); font-size: .74rem; font-weight: 500; }
+.slot-option[data-full='true'] { border-style: dashed; background: transparent; color: var(--muted); cursor: not-allowed; }
+.slot-option[data-full='true'] .slot-time { text-decoration: line-through; text-decoration-thickness: 1px; }
+.slot-option[data-full='true'] .slot-remaining { color: var(--danger); }
+.reservation-time, .queue-number { display: block; font-weight: 500; color: var(--ink); }
+.queue-number { color: var(--peach-ink); font-size: .8rem; }
+.reservation-notes { padding: 8px 12px; border-left: 3px solid var(--peach); background: #fbf7f1; white-space: pre-wrap; }
+.reservation-notes strong { color: var(--ink); }
+/* AR3: license */
+.license { font-size: .74rem; color: var(--accent); }
+.shop-row .license { margin: 10px 0 0; }
+.shop-more { min-height: 36px !important; font-size: .76rem; }
+.shop-details { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; margin: 20px 0 0; }
+.shop-details dt { margin-top: 12px; color: var(--muted); font-size: .74rem; font-weight: 600; }
+.shop-details dd { margin: 0; font-size: .92rem; overflow-wrap: anywhere; }
+/* AR6: LINE */
+.account .line-status { display: inline-flex; gap: 4px; align-items: center; font-size: .78rem; }
+.line-status[data-linked='true'] > span:first-child { color: #06803a; font-weight: 600; }
+.line-button { min-height: 40px; padding: 8px 14px; font-size: .8rem; }
+@media (max-width: 760px) { .slot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .line-button { padding: 8px 10px; } }

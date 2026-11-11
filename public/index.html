@@ -14,7 +14,7 @@
   <header class="header">
     <a class="brand" href="/" aria-label="Massage Reservation home"><svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M20 33V17M20 24C8 25 6 16 8 10c8 0 13 4 12 14ZM20 18C19 8 26 5 33 7c0 7-4 12-13 11Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="brand-name">Massage<span>Reservation</span></span></a>
     <nav aria-label="Main navigation"><a href="#shops">Find a shop</a><a href="#reservations">Reservations</a></nav>
-    <div class="account"><span id="account-name">Welcome in</span><button id="logout" class="secondary" hidden>Log out</button><a id="login-link" class="header-login" href="#account">Log in / Sign up</a></div>
+    <div class="account"><span id="account-name">Welcome in</span><span id="line-status" class="line-status" hidden></span><button id="line-link" class="secondary line-button" type="button" hidden>Link LINE</button><button id="logout" class="secondary" hidden>Log out</button><a id="login-link" class="header-login" href="#account">Log in / Sign up</a></div>
   </header>
   <main id="main">
     <section class="intro" aria-labelledby="welcome-heading">
@@ -49,12 +49,19 @@
       </section>
       <aside id="booking" class="booking" aria-labelledby="booking-heading">
         <div class="booking-title"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M8 3v4m8-4v4M4 11h16m-11 5 2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><h2 id="booking-heading">Make it a date.</h2></div>
-        <p id="booking-description">A little time for you, in just two choices.</p>
-        <div id="selected-shop" class="selected-shop" hidden><strong id="selected-shop-name"></strong><span id="selected-shop-details"></span></div>
+        <p id="booking-description">A little time for you, in just a few choices.</p>
+        <div id="selected-shop" class="selected-shop" hidden><strong id="selected-shop-name"></strong><span id="selected-shop-details"></span><span id="selected-shop-license" class="license"></span></div>
         <form id="booking-form">
           <label>Your massage shop<select name="shop" id="booking-shop" required><option value="">Choose somewhere lovely</option></select></label>
           <label>Your day to unwind<input name="apptDate" type="date" required aria-describedby="date-help"></label>
           <p class="hint" id="date-help">Choose today or a future date. All dates and shop hours are in Thailand time.</p>
+          <fieldset class="slot-field" aria-describedby="slot-help">
+            <legend>Your time</legend>
+            <div id="slot-list" class="slot-list" aria-live="polite"></div>
+            <p class="hint" id="slot-help">Choose a shop and a day to see open times.</p>
+          </fieldset>
+          <label>Notes or special requests <span class="optional">(optional)</span><textarea name="notes" id="booking-notes" rows="4" maxlength="1000" aria-describedby="notes-help" placeholder="e.g. prefer a female masseuse, therapist name, injuries or body conditions, areas to avoid, doctor's advice (no acupressure)"></textarea></label>
+          <p class="hint" id="notes-help"><span id="notes-count">0</span> / 1000 characters</p>
           <button id="booking-submit" type="submit">Reserve a massage</button>
           <button id="cancel-edit" type="button" class="secondary" hidden>Cancel editing</button>
           <p id="booking-error" class="error" role="alert"></p>
@@ -74,11 +81,19 @@
         <label>Telephone<input name="tel" type="tel" required></label>
         <label>Opens at<input name="openTime" type="time" required></label>
         <label>Closes at<input name="closeTime" type="time" required></label>
+        <label>Guests per hour (capacity)<input name="capacity" type="number" min="1" max="20" step="1" value="3" required></label>
+        <label>Health Establishment License no.<input name="licenseNumber" placeholder="HE-2569-10-00123" pattern="[Hh][Ee]-25[0-9]{2}-[0-9]{2}-[0-9]{5}"></label>
+        <label>License valid until<input name="licenseExpiresAt" type="date"></label>
         <button type="submit">Add shop</button><p id="shop-error" class="error" role="alert"></p>
       </form>
     </details>
   </main>
   <footer><div><strong>Massage Reservation</strong><p>More room to breathe. More time for you.</p></div><a href="#shops">Find your next pause</a></footer>
+  <dialog id="shop-dialog" aria-labelledby="shop-dialog-heading">
+    <h2 id="shop-dialog-heading"></h2>
+    <dl id="shop-dialog-details" class="shop-details"></dl>
+    <div class="dialog-actions"><button id="shop-dialog-close" class="secondary" type="button">Close</button><button id="shop-dialog-choose" type="button">Choose this shop</button></div>
+  </dialog>
   <dialog id="delete-dialog" aria-labelledby="delete-heading">
     <h2 id="delete-heading">Delete this reservation?</h2><p>This frees a place for another booking. You can make a new reservation whenever you’re ready.</p>
     <div class="dialog-actions"><button id="keep-reservation" class="secondary">Keep reservation</button><button id="confirm-delete" class="danger">Delete reservation</button></div><p id="delete-error" class="error" role="alert"></p>

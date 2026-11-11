@@ -37,6 +37,8 @@ const UserSchema = new mongoose.Schema({
     minlength: 6,
     select: false,
   },
+  // AR6: LINE userId (the ID token `sub`) from LINE Login. No LINE access token is stored.
+  lineUserId: { type: String, select: false },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   createdAt: {
@@ -44,6 +46,8 @@ const UserSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+UserSchema.index({ lineUserId: 1 }, { unique: true, partialFilterExpression: { lineUserId: { $type: "string" } } });
 
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return;
