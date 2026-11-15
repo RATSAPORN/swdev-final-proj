@@ -10,6 +10,7 @@ const schema = new mongoose.Schema({
   description: String,
   image: String,
   tags: [String],
+  notificationAdmin: { type: mongoose.Schema.Types.ObjectId, ref: 'User', select: false },
   // AR1: how many guests the shop can serve at the same time in one 60-minute period.
   capacity: { type: Number, default: 3, required: [true, 'Capacity is required'], min: [1, 'Capacity must be at least 1'], max: [20, 'Capacity must be 20 or fewer'], validate: { validator: Number.isInteger, message: 'Capacity must be a whole number' } },
   // AR3: Health Establishment License (ใบอนุญาตสถานประกอบการเพื่อสุขภาพ).

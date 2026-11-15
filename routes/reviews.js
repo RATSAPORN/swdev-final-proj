@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const c = require('../controllers/reviews');
+const { protect, authorize } = require('../middleware/auth');
+router.use(protect, authorize('admin'));
+router.get('/recipients', c.recipients);
+router.get('/shops', c.settings);
+router.get('/', c.adminList);
+router.patch('/:id', c.moderate);
+router.delete('/:id', c.remove);
+module.exports = router;

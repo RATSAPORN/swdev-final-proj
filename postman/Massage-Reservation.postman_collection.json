@@ -1,0 +1,2843 @@
+{
+  "info": {
+    "name": "Massage Reservation · Presentation & Extra Credits",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Run in folder order. Steps 01–12 match the presentation checklist. Step 15 demonstrates extra credits with isolated fixtures and mock LINE only. Start npm run postman:demo first. Restart the demo before repeating extra credits. No Swagger or manual ID/token copying required. Steps 0, 13, 14 and 16 belong to slides."
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "invalidToken",
+      "value": "deliberately-invalid-session"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.info.requestName === '01.1 Reject registration without telephone') {",
+          "  const stamp = Date.now() + '-' + Math.random().toString(36).slice(2, 8);",
+          "  ['userToken','userId','adminToken','adminId','shopId','ownBookingId','adminBookingId','quotaBookingId','reviewToken','reviewId','completedId','reviewShopId','reminderId','reminderAsOf','lineCallback','lineState'].forEach(k => pm.collectionVariables.unset(k));",
+          "  pm.collectionVariables.set('userEmail', 'presentation-' + stamp + '@example.com');",
+          "  pm.collectionVariables.set('userPassword', 'Presentation123!');",
+          "  [1,2,3,4].forEach(day => pm.collectionVariables.set('day'+day, new Date(Date.now() + 7*3600000 + day*86400000).toISOString().slice(0,10)));",
+          "  pm.collectionVariables.set('busyDay', new Date(Date.now() + 7*3600000 + 10*86400000).toISOString().slice(0,10));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 · User registration + validation",
+      "item": [
+        {
+          "name": "01.1 Reject registration without telephone",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "description": "01.1 Reject registration without telephone. Expected HTTP 400. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Presentation Guest\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.2 Reject a short password",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "description": "01.2 Reject a short password. Expected HTTP 400. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Presentation Guest\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"123\",\n  \"tel\": \"0812345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.3 Register a regular user (role escalation ignored)",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "description": "01.3 Register a regular user (role escalation ignored). Expected HTTP 201. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Presentation Guest\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"tel\": \"0812345678\",\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('JWT returned', () => pm.expect(result.token).to.be.a('string').and.not.empty); pm.collectionVariables.set('userToken', result.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.4 Reject duplicate email",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "description": "01.4 Reject duplicate email. Expected HTTP 409. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"tel\": \"0812345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 · User log-in",
+      "item": [
+        {
+          "name": "02.1 Reject wrong password",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "02.1 Reject wrong password. Expected HTTP 401. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"wrong-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.2 User log-in",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "02.2 User log-in. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('JWT returned', () => pm.expect(result.token).to.be.a('string').and.not.empty); pm.collectionVariables.set('userToken', result.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.3 Confirm ordinary role and identity",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/me",
+            "description": "02.3 Confirm ordinary role and identity. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('MongoDB ID returned', () => pm.expect(result.data._id).to.match(/^[a-f0-9]{24}$/)); pm.collectionVariables.set('userId', result.data._id); pm.test('Registration cannot grant admin', () => pm.expect(result.data.role).to.eql('user')); pm.test('Correct user', () => pm.expect(result.data.email).to.eql(pm.collectionVariables.get('userEmail')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 · User view massage shops",
+      "item": [
+        {
+          "name": "03.1 Browse massage shops",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/shops",
+            "description": "03.1 Browse massage shops. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "const shop = result.data.find(s => s.name === 'Postman Presentation Shop'); pm.test('Presentation shop is seeded', () => pm.expect(shop).to.be.an('object')); if (shop) pm.collectionVariables.set('shopId', shop._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.2 View shop details, hours and license",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/shops/{{shopId}}",
+            "description": "03.2 View shop details, hours and license. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Shop information is complete', () => { ['name','address','tel','openTime','closeTime','capacity','licenseNumber'].forEach(k => pm.expect(result.data).to.have.property(k)); pm.expect(result.data.capacity).to.eql(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.3 View available 60-minute periods",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/shops/{{shopId}}/availability?date={{day1}}",
+            "description": "03.3 View available 60-minute periods. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Hourly periods available', () => { pm.expect(result.slotMinutes).to.eql(60); pm.expect(result.data.some(s => s.start === '10:00' && s.available)).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 · User create booking + condition checks",
+      "item": [
+        {
+          "name": "04.1 Reject unauthenticated booking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{invalidToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "04.1 Reject unauthenticated booking. Expected HTTP 401. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop\": \"{{shopId}}\",\n  \"apptDate\": \"{{day1}}\",\n  \"startTime\": \"10:00\",\n  \"notes\": \"Presentation booking: quiet room please\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.2 Reject past date",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "04.2 Reject past date. Expected HTTP 400. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop\": \"{{shopId}}\",\n  \"apptDate\": \"2020-01-01\",\n  \"startTime\": \"10:00\",\n  \"notes\": \"Presentation booking: quiet room please\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.3 Reject missing start time",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "04.3 Reject missing start time. Expected HTTP 400. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop\": \"{{shopId}}\",\n  \"apptDate\": \"{{day1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.4 Reject time outside opening hours",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "04.4 Reject time outside opening hours. Expected HTTP 400. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop\": \"{{shopId}}\",\n  \"apptDate\": \"{{day1}}\",\n  \"startTime\": \"02:00\",\n  \"notes\": \"Presentation booking: quiet room please\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.5 Reject a fully booked period",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "04.5 Reject a fully booked period. Expected HTTP 409. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop\": \"{{shopId}}\",\n  \"apptDate\": \"{{busyDay}}\",\n  \"startTime\": \"10:00\",\n  \"notes\": \"Presentation booking: quiet room please\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  "pm.test('Capacity conflict explained', () => pm.expect(result.message).to.include('fully booked'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.6 Create own booking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "04.6 Create own booking. Expected HTTP 201. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop\": \"{{shopId}}\",\n  \"apptDate\": \"{{day1}}\",\n  \"startTime\": \"10:00\",\n  \"notes\": \"Presentation booking: quiet room please\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('MongoDB ID returned', () => pm.expect(result.data._id).to.match(/^[a-f0-9]{24}$/)); pm.collectionVariables.set('ownBookingId', result.data._id); pm.test('Notes, owner and queue saved', () => { pm.expect(result.data.user).to.eql(pm.collectionVariables.get('userId')); pm.expect(result.data.notes).to.include('quiet room'); pm.expect(result.data.queueNumber).to.be.above(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.7 Create booking retained for admin demo",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "04.7 Create booking retained for admin demo. Expected HTTP 201. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop\": \"{{shopId}}\",\n  \"apptDate\": \"{{day2}}\",\n  \"startTime\": \"10:00\",\n  \"notes\": \"Presentation booking: quiet room please\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('MongoDB ID returned', () => pm.expect(result.data._id).to.match(/^[a-f0-9]{24}$/)); pm.collectionVariables.set('adminBookingId', result.data._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.8 Create third booking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "04.8 Create third booking. Expected HTTP 201. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop\": \"{{shopId}}\",\n  \"apptDate\": \"{{day3}}\",\n  \"startTime\": \"10:00\",\n  \"notes\": \"Presentation booking: quiet room please\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('MongoDB ID returned', () => pm.expect(result.data._id).to.match(/^[a-f0-9]{24}$/)); pm.collectionVariables.set('quotaBookingId', result.data._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.9 Reject fourth booking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "04.9 Reject fourth booking. Expected HTTP 400. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop\": \"{{shopId}}\",\n  \"apptDate\": \"{{day4}}\",\n  \"startTime\": \"10:00\",\n  \"notes\": \"Presentation booking: quiet room please\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  "pm.test('Three-booking limit explained', () => pm.expect(result.message).to.include('3 reservations'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 · User view own bookings",
+      "item": [
+        {
+          "name": "05.1 List only own bookings",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "05.1 List only own bookings. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Exactly three owned bookings', () => { pm.expect(result.count).to.eql(3); result.data.forEach(r => pm.expect(r.user).to.eql(pm.collectionVariables.get('userId'))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.2 View own booking by ID",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{ownBookingId}}",
+            "description": "05.2 View own booking by ID. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Requested booking', () => pm.expect(result.data._id).to.eql(pm.collectionVariables.get('ownBookingId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 · User update own booking",
+      "item": [
+        {
+          "name": "06.1 Reschedule and update notes",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{ownBookingId}}",
+            "description": "06.1 Reschedule and update notes. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apptDate\": \"{{day4}}\",\n  \"startTime\": \"11:00\",\n  \"notes\": \"Updated request: gentle pressure\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Updated fields and unchanged owner', () => { pm.expect(result.data.apptDate).to.eql(pm.collectionVariables.get('day4')); pm.expect(result.data.startTime).to.eql('11:00'); pm.expect(result.data.notes).to.include('gentle pressure'); pm.expect(result.data.user).to.eql(pm.collectionVariables.get('userId')); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 · User delete own booking",
+      "item": [
+        {
+          "name": "07.1 Delete own booking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{ownBookingId}}",
+            "description": "07.1 Delete own booking. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07.2 Deleted booking returns 404",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{ownBookingId}}",
+            "description": "07.2 Deleted booking returns 404. Expected HTTP 404. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07.3 Clean up quota booking; retain admin target",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{quotaBookingId}}",
+            "description": "07.3 Clean up quota booking; retain admin target. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07.4 One booking remains for admin demonstration",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "07.4 One booking remains for admin demonstration. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Admin target retained', () => { pm.expect(result.count).to.eql(1); pm.expect(result.data[0]._id).to.eql(pm.collectionVariables.get('adminBookingId')); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 · User log-out",
+      "item": [
+        {
+          "name": "08.1 Log out user",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "08.1 Log out user. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08.2 Revoked token cannot read bookings",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "08.2 Revoked token cannot read bookings. Expected HTTP 401. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 · Admin log-in",
+      "item": [
+        {
+          "name": "09.1 Admin log-in",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "09.1 Admin log-in. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('JWT returned', () => pm.expect(result.token).to.be.a('string').and.not.empty); pm.collectionVariables.set('adminToken', result.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09.2 Confirm administrator role",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/me",
+            "description": "09.2 Confirm administrator role. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('MongoDB ID returned', () => pm.expect(result.data._id).to.match(/^[a-f0-9]{24}$/)); pm.collectionVariables.set('adminId', result.data._id); pm.test('Administrator role', () => pm.expect(result.data.role).to.eql('admin'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 · Admin view any booking",
+      "item": [
+        {
+          "name": "10.1 Admin lists another user booking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "10.1 Admin lists another user booking. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Another user booking and guest details visible', () => { const r = result.data.find(r => r._id === pm.collectionVariables.get('adminBookingId')); pm.expect(r).to.be.an('object'); pm.expect(r.user._id).to.eql(pm.collectionVariables.get('userId')); pm.expect(r.user.email).to.eql(pm.collectionVariables.get('userEmail')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.2 Admin reads another user booking by ID",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{adminBookingId}}",
+            "description": "10.2 Admin reads another user booking by ID. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Booking belongs to ordinary user', () => pm.expect(result.data.user).to.eql(pm.collectionVariables.get('userId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11 · Admin update any booking",
+      "item": [
+        {
+          "name": "11.1 Admin reschedules another user booking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{adminBookingId}}",
+            "description": "11.1 Admin reschedules another user booking. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apptDate\": \"{{day4}}\",\n  \"startTime\": \"12:00\",\n  \"notes\": \"Admin changed the booking\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Admin changes booking without taking ownership', () => { pm.expect(result.data.user).to.eql(pm.collectionVariables.get('userId')); pm.expect(result.data.startTime).to.eql('12:00'); pm.expect(result.data.apptDate).to.eql(pm.collectionVariables.get('day4')); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12 · Admin delete any booking",
+      "item": [
+        {
+          "name": "12.1 Admin deletes another user booking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{adminBookingId}}",
+            "description": "12.1 Admin deletes another user booking. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.2 Confirm booking removed",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{adminBookingId}}",
+            "description": "12.2 Confirm booking removed. Expected HTTP 404. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "15 · Extra credits — LINE, reviews and moderation",
+      "item": [
+        {
+          "name": "15.01 Review fixture user log-in",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "15.01 Review fixture user log-in. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{reviewEmail}}\",\n  \"password\": \"{{reviewPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('JWT returned', () => pm.expect(result.token).to.be.a('string').and.not.empty); pm.collectionVariables.set('reviewToken', result.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.02 Find completed and future fixture visits",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "15.02 Find completed and future fixture visits. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "const completed = result.data.find(r => r.notes === 'Postman completed visit fixture'); const future = result.data.find(r => r.notes === 'Postman reminder fixture'); pm.test('Fresh eligible completed fixture exists', () => { pm.expect(completed).to.be.an('object'); pm.expect(completed.canReview).to.eql(true); pm.expect(future).to.be.an('object'); }); if (completed && future) { pm.collectionVariables.set('completedId', completed._id); pm.collectionVariables.set('reviewShopId', completed.shop._id); pm.collectionVariables.set('reminderId', future._id); pm.collectionVariables.set('reminderAsOf', new Date(new Date(future.startAt).getTime() - 30*60000).toISOString()); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.03 Check safe mock LINE mode",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/line/status",
+            "description": "15.03 Check safe mock LINE mode. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Local mock login and dry-run delivery', () => { pm.expect(result.data.loginMode).to.eql('mock'); pm.expect(result.data.messagingMode).to.eql('dry-run'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.04 Start mock LINE linking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/line/login",
+            "description": "15.04 Start mock LINE linking. Expected HTTP 302. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "const callback = pm.response.headers.get('Location'); pm.test('Mock callback redirect', () => pm.expect(callback.startsWith('/api/v1/line/callback?code=mock-code&state=')).to.eql(true)); pm.collectionVariables.set('lineCallback', callback); pm.collectionVariables.set('lineState', decodeURIComponent(callback.match(/state=([^&]+)/)[1]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.05 Finish mock LINE linking",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "line_state={{lineState}}"
+              }
+            ],
+            "url": "{{baseUrl}}{{lineCallback}}",
+            "description": "15.05 Finish mock LINE linking. Expected HTTP 302. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('LINE link confirmed', () => pm.expect(pm.response.headers.get('Location')).to.include('line=linked'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.06 Confirm LINE linked",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/line/status",
+            "description": "15.06 Confirm LINE linked. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Account is linked', () => pm.expect(result.data.linked).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.07 Assign shop notification administrator",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/shops/{{reviewShopId}}",
+            "description": "15.07 Assign shop notification administrator. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notificationAdmin\": \"{{adminId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.08 Run post-visit prompt scheduler",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/dev/review-notifications/run",
+            "description": "15.08 Run post-visit prompt scheduler. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Review prompt delivered in dry-run mode', () => pm.expect(result.data.some(job => job.id === pm.collectionVariables.get('completedId') && job.kind === 'reviewPrompt' && job.status === 'sent')).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.09 Inspect LINE review prompt",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/dev/line/outbox",
+            "description": "15.09 Inspect LINE review prompt. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Prompt contains review link', () => pm.expect(result.data.some(m => m.text.includes('Please leave a review') && m.text.includes(pm.collectionVariables.get('completedId')))).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.10 Run pre-appointment reminder scheduler",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/dev/reminders/run",
+            "description": "15.10 Run pre-appointment reminder scheduler. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asOf\": \"{{reminderAsOf}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Appointment reminder sent', () => pm.expect(result.data.some(r => r.reservation === pm.collectionVariables.get('reminderId') && r.status === 'sent')).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.11 Reject review before visit completion",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{reminderId}}/review",
+            "description": "15.11 Reject review before visit completion. Expected HTTP 400. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Too early\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.12 Reject review by another account (even admin)",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{completedId}}/review",
+            "description": "15.12 Reject review by another account (even admin). Expected HTTP 403. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 2,\n  \"comment\": \"Not my visit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.13 Reject invalid review rating",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{completedId}}/review",
+            "description": "15.13 Reject invalid review rating. Expected HTTP 400. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 0,\n  \"comment\": \"Invalid rating\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.14 Reject blank review comment",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{completedId}}/review",
+            "description": "15.14 Reject blank review comment. Expected HTTP 400. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 2,\n  \"comment\": \"   \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.15 Submit low-rating verified review",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{completedId}}/review",
+            "description": "15.15 Submit low-rating verified review. Expected HTTP 201. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 2,\n  \"comment\": \"Please improve the waiting time.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('MongoDB ID returned', () => pm.expect(result.data._id).to.match(/^[a-f0-9]{24}$/)); pm.collectionVariables.set('reviewId', result.data._id); pm.test('Saved rating and comment', () => { pm.expect(result.data.rating).to.eql(2); pm.expect(result.data.comment).to.include('waiting time'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.16 Reject duplicate review",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{completedId}}/review",
+            "description": "15.16 Reject duplicate review. Expected HTTP 409. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Second submission\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.17 Display public reviews and average",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/shops/{{reviewShopId}}/reviews",
+            "description": "15.17 Display public reviews and average. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Public review and average', () => { pm.expect(result.total).to.eql(1); pm.expect(result.averageRating).to.eql(2); pm.expect(result.data[0]._id).to.eql(pm.collectionVariables.get('reviewId')); pm.expect(result.data[0].author).to.have.keys('name'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.18 Run new-review shop alert scheduler",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/dev/review-notifications/run",
+            "description": "15.18 Run new-review shop alert scheduler. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Shop alert sent', () => pm.expect(result.data.some(job => job.id === pm.collectionVariables.get('reviewId') && job.kind === 'notification' && job.status === 'sent')).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.19 Inspect low-rating LINE alert",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/dev/line/outbox",
+            "description": "15.19 Inspect low-rating LINE alert. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Low rating is prominent in alert', () => pm.expect(result.data.some(m => m.text.includes('Low-rating review') && m.text.includes('2/5') && m.text.includes('waiting time'))).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.20 Ordinary user cannot moderate reviews",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}",
+            "description": "15.20 Ordinary user cannot moderate reviews. Expected HTTP 403. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hidden\": true,\n  \"reason\": \"Spam\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.21 Admin hides review with policy reason",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}",
+            "description": "15.21 Admin hides review with policy reason. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hidden\": true,\n  \"reason\": \"Spam / policy demonstration\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Review hidden', () => pm.expect(result.data.hidden).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.22 Hidden review excluded from public average",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/shops/{{reviewShopId}}/reviews",
+            "description": "15.22 Hidden review excluded from public average. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('No visible reviews', () => { pm.expect(result.total).to.eql(0); pm.expect(result.averageRating).to.eql(null); pm.expect(result.data).to.have.lengthOf(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.23 Admin lists hidden review",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reviews?shop={{reviewShopId}}",
+            "description": "15.23 Admin lists hidden review. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Hidden review retained for moderation', () => { pm.expect(result.data[0].hidden).to.eql(true); pm.expect(result.data[0].moderationReason).to.include('Spam'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.24 Admin restores review",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}",
+            "description": "15.24 Admin restores review. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hidden\": false,\n  \"reason\": \"Policy review complete\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.25 Shop summary includes restored review",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/shops/{{reviewShopId}}",
+            "description": "15.25 Shop summary includes restored review. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Restored average recalculated', () => { pm.expect(result.data.reviewCount).to.eql(1); pm.expect(result.data.averageRating).to.eql(2); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.26 Admin deletes review",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}",
+            "description": "15.26 Admin deletes review. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.27 Deleted review excluded from shop summary",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/shops/{{reviewShopId}}",
+            "description": "15.27 Deleted review excluded from shop summary. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('Deleted review excluded', () => { pm.expect(result.data.reviewCount).to.eql(0); pm.expect(result.data.averageRating).to.eql(null); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.28 Deletion does not permit reposting",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations/{{completedId}}/review",
+            "description": "15.28 Deletion does not permit reposting. Expected HTTP 409. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Trying again after deletion\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.29 Unlink mock LINE account",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/line/link",
+            "description": "15.29 Unlink mock LINE account. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  "pm.test('LINE unlinked', () => pm.expect(result.data.linked).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.30 Review guest log-out",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{reviewToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "15.30 Review guest log-out. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.31 Admin log-out",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "15.31 Admin log-out. Expected HTTP 200. Run in order using the Local-Demo environment; credentials and IDs are captured automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(true));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15.32 Revoked admin token denied",
+          "protocolProfileBehavior": {
+            "disableCookies": true,
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reviews",
+            "description": "15.32 Revoked admin token denied. Expected HTTP 401. Run in order using the Local-Demo environment; credentials and IDs are captured automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "const result = pm.response.json();",
+                  "pm.test('Response success flag', () => pm.expect(result.success).to.eql(false));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

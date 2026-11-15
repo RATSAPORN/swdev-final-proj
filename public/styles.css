@@ -323,4 +323,15 @@ textarea::placeholder { color: #69776c; font-size: .82rem; }
 .account .line-status { display: inline-flex; gap: 4px; align-items: center; font-size: .78rem; }
 .line-status[data-linked='true'] > span:first-child { color: #06803a; font-weight: 600; }
 .line-button { min-height: 40px; padding: 8px 14px; font-size: .8rem; }
+.shop-rating { color: var(--accent); font-size: .85rem; font-weight: 600; margin: 8px 0; }
+.shop-reviews { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 16px; }
+.review-entry { border-bottom: 1px solid var(--line); padding: 16px 0; }
+.review-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; font-size: .85rem; }
+.review-meta time, .review-state { color: var(--muted); font-size: .8rem; }
+.review-comment { white-space: pre-wrap; overflow-wrap: anywhere; margin: 10px 0; }
+.review-form { display: grid; gap: 14px; margin-top: 20px; }
+.review-recipient-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px 16px; border-top: 1px solid var(--line); padding: 16px 0; }
+.review-recipient-form p { grid-column: 1 / -1; margin: 0; }
+#review-admin > p { max-width: 65ch; }
+@media (max-width: 480px) { .review-recipient-form { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .slot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .line-button { padding: 8px 10px; } }

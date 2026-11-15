@@ -14,7 +14,9 @@ testas6.json
 
 *test*
 
-tests/*
+output/*
+
+*.pptx
 
 docs/*
 scripts/

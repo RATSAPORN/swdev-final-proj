@@ -6,6 +6,7 @@ const { slotsFor, startAtFor, toMinutes, toHHMM, SLOT_MINUTES } = require('../ut
 const { nextQueueNumber } = require('../services/queue');
 const notifications = require('../services/notifications');
 const reminder = require('../services/reminder');
+const reviewState = require('../utils/reviews');
 const shopDetails = { path: 'shop', select: 'name address telephone opens closes capacity licenseNumber licenseExpiresAt' };
 const allowed = (reservation, user) => String(reservation.user._id || reservation.user) === user.id || user.role === 'admin';
 
@@ -28,13 +29,13 @@ exports.getReservations = async (req, res) => {
   let query = Reservation.find(filter).populate(shopDetails).sort('apptDate createdAt');
   if (req.user.role === 'admin') query = query.populate({ path: 'user', select: 'name email tel' });
   const data = await query;
-  res.json({ success: true, count: data.length, data });
+  res.json({ success: true, count: data.length, data: await reviewState.reservationState(data, req.user) });
 };
 exports.getReservation = async (req, res) => {
   const data = await Reservation.findById(id(req.params.id)).populate(shopDetails);
   if (!data) fail(404, 'Reservation not found');
   if (!allowed(data, req.user)) fail(403, 'This reservation belongs to another user');
-  res.json({ success: true, data });
+  res.json({ success: true, data: (await reviewState.reservationState([data], req.user))[0] });
 };
 exports.addReservation = async (req, res) => {
   const data = fields(req.body, ['apptDate', 'shop', 'startTime', 'notes']);
@@ -69,6 +70,9 @@ exports.updateReservation = async (req, res) => {
   if (!allowed(reservation, req.user)) fail(403, 'This reservation belongs to another user');
   const data = fields(req.body, ['apptDate', 'shop', 'startTime', 'notes']);
   if (!Object.keys(data).length) fail(400, 'Provide apptDate, shop, startTime or notes to update');
+  if (['apptDate', 'shop', 'startTime'].some(key => Object.hasOwn(data, key)) && reviewState.completed(reservation)) {
+    fail(409, 'Completed reservations cannot be rescheduled. Make a new booking instead');
+  }
   const update = { $set: {}, $unset: {} };
   if (Object.hasOwn(data, 'notes')) {
     const notes = cleanNotes(data.notes);
@@ -89,8 +93,15 @@ exports.updateReservation = async (req, res) => {
       Object.assign(update.$set, { apptDate, shop, startTime: time, startAt, ...reminder.initialState(startAt) });
       for (let seat = 1; seat <= shopDoc.capacity && !moved; seat++) {
         try {
-          const result = await Reservation.updateOne({ _id: reservation._id }, ops({ seat }), { runValidators: true });
-          if (!result.matchedCount) fail(404, 'Reservation no longer exists');
+          // Recheck at the write: a slow request must not move a visit another request can now review.
+          const result = await Reservation.updateOne({
+            _id: reservation._id, reviewSubmitted: { $ne: true },
+            $or: [{ startAt: { $exists: false } }, { startAt: null }, { startAt: { $gt: new Date(Date.now() - SLOT_MINUTES * 60000) } }],
+          }, ops({ seat }), { runValidators: true });
+          if (!result.matchedCount) {
+            if (!await Reservation.exists({ _id: reservation._id })) fail(404, 'Reservation no longer exists');
+            fail(409, 'This reservation has completed or been reviewed and cannot be rescheduled');
+          }
           moved = true;
         } catch (error) {
           if (!isSeatConflict(error)) throw error;

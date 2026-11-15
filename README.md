@@ -1,5 +1,9 @@
 # Massage Reservation
 
+Requirements 7–11 (verified reviews, public ratings, admin moderation and LINE review alerts) are implemented. See [Reviews setup and API](docs/reviews.md) for configuration, shop administrator assignments and verification commands.
+
+For the presentation checklist, run `npm run test:postman` or import the collection and environment in [postman/](postman/README.md). The dedicated demo covers user/admin bookings plus review and LINE extra credits with disposable local fixtures.
+
 Express 5 + MongoDB/Mongoose backend and a responsive, same-origin HTML/CSS/JavaScript interface. Adapted from the existing hospital appointment assignment. Domain code now uses **Reservation**, **MassageShop**, and `/api/v1/reservations`.
 
 ## Quick local demo
