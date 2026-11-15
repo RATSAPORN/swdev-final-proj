@@ -80,7 +80,7 @@ async function verifyLogin({ code, codeVerifier, nonce, userId }) {
   return { sub: claims.sub };
 }
 
-async function pushMessage(to, text) {
+async function pushMessage(to, text, retryKey = crypto.randomUUID()) {
   const message = String(text).slice(0, 5000);
   if (messagingMode() === 'dry-run') {
     sent.push({ to, text: message, at: new Date().toISOString() });
@@ -93,11 +93,13 @@ async function pushMessage(to, text) {
     headers: {
       Authorization: `Bearer ${env('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')}`,
       'Content-Type': 'application/json',
-      'X-Line-Retry-Key': crypto.randomUUID(),
+      'X-Line-Retry-Key': retryKey,
     },
     body: JSON.stringify({ to, messages: [{ type: 'text', text: message }] }),
     signal: AbortSignal.timeout(8000),
   });
+  // LINE returns 409 + this header when the same retry key was already accepted.
+  if (response.status === 409 && response.headers.get('x-line-accepted-request-id')) return { dryRun: false };
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(`push to ${mask(to)} returned HTTP ${response.status}${typeof body.message === 'string' ? ` (${body.message})` : ''}`);

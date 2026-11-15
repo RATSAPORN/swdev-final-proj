@@ -7,6 +7,7 @@
   <title>Massage Reservation</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/shop-search.js" defer></script>
+  <script src="/reviews.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -87,16 +88,51 @@
         <button type="submit">Add shop</button><p id="shop-error" class="error" role="alert"></p>
       </form>
     </details>
+    <details id="review-admin" class="admin-panel" hidden>
+      <summary>Review moderation &amp; LINE alerts</summary>
+      <p>Hide abusive or spam reviews with a reason, restore them after review, or delete them permanently.</p>
+      <div id="review-moderation" aria-live="polite"></div>
+      <h3>Shop notification recipients</h3>
+      <p>Choose a linked administrator to receive new-review alerts for each shop.</p>
+      <div id="review-recipient-settings"></div>
+      <p id="review-admin-error" class="error" role="alert"></p>
+    </details>
   </main>
   <footer><div><strong>Massage Reservation</strong><p>More room to breathe. More time for you.</p></div><a href="#shops">Find your next pause</a></footer>
   <dialog id="shop-dialog" aria-labelledby="shop-dialog-heading">
     <h2 id="shop-dialog-heading"></h2>
     <dl id="shop-dialog-details" class="shop-details"></dl>
+    <section aria-labelledby="shop-reviews-heading" class="shop-reviews">
+      <h3 id="shop-reviews-heading">Guest reviews</h3>
+      <p id="shop-rating-summary" aria-live="polite"></p>
+      <div id="shop-reviews" aria-live="polite"></div>
+      <div id="shop-review-pagination" class="dialog-actions"></div>
+    </section>
     <div class="dialog-actions"><button id="shop-dialog-close" class="secondary" type="button">Close</button><button id="shop-dialog-choose" type="button">Choose this shop</button></div>
   </dialog>
   <dialog id="delete-dialog" aria-labelledby="delete-heading">
     <h2 id="delete-heading">Delete this reservation?</h2><p>This frees a place for another booking. You can make a new reservation whenever you’re ready.</p>
     <div class="dialog-actions"><button id="keep-reservation" class="secondary">Keep reservation</button><button id="confirm-delete" class="danger">Delete reservation</button></div><p id="delete-error" class="error" role="alert"></p>
+  </dialog>
+  <dialog id="review-dialog" aria-labelledby="review-heading">
+    <h2 id="review-heading">How was your visit?</h2>
+    <p id="review-visit"></p>
+    <form id="review-form" class="review-form">
+      <label>Rating<select name="rating" required><option value="">Choose a rating</option><option value="5">5 — Excellent</option><option value="4">4 — Good</option><option value="3">3 — Okay</option><option value="2">2 — Poor</option><option value="1">1 — Very poor</option></select></label>
+      <label>Your review<textarea name="comment" required maxlength="2000" rows="5" aria-describedby="review-policy"></textarea></label>
+      <p id="review-policy" class="hint">Share your experience in 1–2000 characters. Keep it respectful and avoid personal contact details or spam.</p>
+      <p id="review-error" class="error" role="alert"></p>
+      <div class="dialog-actions"><button id="review-cancel" class="secondary" type="button">Cancel</button><button type="submit">Submit review</button></div>
+    </form>
+  </dialog>
+  <dialog id="moderation-dialog" aria-labelledby="moderation-heading">
+    <h2 id="moderation-heading">Moderate review</h2>
+    <p id="moderation-description"></p>
+    <form id="moderation-form" class="review-form">
+      <label id="moderation-reason-label">Reason<textarea name="reason" maxlength="500" rows="3"></textarea></label>
+      <p id="moderation-error" class="error" role="alert"></p>
+      <div class="dialog-actions"><button id="moderation-cancel" class="secondary" type="button">Cancel</button><button id="moderation-confirm" type="submit">Confirm</button></div>
+    </form>
   </dialog>
 </body>
 </html>

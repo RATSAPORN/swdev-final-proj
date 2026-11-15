@@ -5,6 +5,12 @@ const { fail, fields } = require('../middleware/validation');
 const reminder = require('../services/reminder');
 const line = require('../services/line');
 router.use(protect, authorize('admin'));
+router.post('/review-notifications/run', async (req, res) => {
+  const { asOf } = fields(req.body, ['asOf']);
+  if (asOf !== undefined && (typeof asOf !== 'string' || !Number.isFinite(Date.parse(asOf)))) fail(400, 'asOf must be an ISO date-time');
+  const data = await require('../services/review-notifications').runOnce(asOf ? new Date(asOf) : new Date());
+  res.json({ success: true, count: data.length, data });
+});
 
 // Run the reminder scheduler now. Optional `asOf` (ISO date-time) simulates the current time.
 router.post('/reminders/run', async (req, res) => {

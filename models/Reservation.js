@@ -18,6 +18,8 @@ const schema = new mongoose.Schema({
   // AR5: null = reminder still due; set when the scheduler claims it (or when it is skipped).
   reminderSentAt: { type: Date, default: null },
   reminderStatus: { type: String, enum: ['pending', 'sending', 'sent', 'skipped', 'not-linked', 'failed'] },
+  reviewSubmitted: { type: Boolean, default: false },
+  reviewPrompt: { type: require('./ReviewDelivery'), select: false },
 });
 // Three slots and a unique index enforce the limit under concurrent requests.
 // Match the existing SW_DEV index; every new reservation is active until deleted.
@@ -26,4 +28,5 @@ schema.index({ user: 1, slot: 1 }, { unique: true, partialFilterExpression: { ac
 schema.index({ shop: 1, apptDate: 1, startTime: 1, seat: 1 }, { unique: true, partialFilterExpression: { active: true, seat: { $exists: true } } });
 schema.index({ shop: 1, apptDate: 1, queueNumber: 1 }, { unique: true, partialFilterExpression: { queueNumber: { $exists: true } } });
 schema.index({ reminderSentAt: 1, startAt: 1 });
+schema.index({ startAt: 1, 'reviewPrompt.status': 1 });
 module.exports = mongoose.model('Reservation', schema);

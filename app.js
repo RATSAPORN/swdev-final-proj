@@ -18,6 +18,7 @@ app.use('/api/v1/auth', require('./routes/auth'));
 app.use('/api/v1/shops', require('./routes/shops'));
 app.use('/api/v1/reservations', require('./routes/reservations'));
 app.use('/api/v1/line', require('./routes/line'));
+app.use('/api/v1/reviews', require('./routes/reviews'));
 if (process.env.NODE_ENV === 'development') app.use('/api/v1/dev', require('./routes/dev'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));

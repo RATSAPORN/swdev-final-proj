@@ -85,6 +85,7 @@ function renderAccount() {
   $('#reservation-heading').textContent = state.user?.role === 'admin' ? 'All reservations' : 'Good moments, coming up.';
   $('#reservation-description').textContent = state.user?.role === 'admin' ? 'View, edit, or delete a reservation for any user.' : 'Your reservations, with room for a change of plans.';
   updateQuota(); renderLine();
+  reviewUI.renderAdmin();
 }
 function updateQuota() {
   const count = state.reservations.filter(r => (r.user?._id || r.user) === state.user?._id).length;
@@ -110,6 +111,7 @@ function renderShops() {
     title.append(node('h3', shop.name));
     if (shop.neighborhood) title.append(node('span', shop.neighborhood, 'neighborhood'));
     info.append(title);
+    info.append(node('p', reviewUI.ratingText(shop.averageRating, shop.reviewCount), 'shop-rating'));
     if (shop.description) info.append(node('p', shop.description, 'shop-description'));
     if (Array.isArray(shop.tags) && shop.tags.length) {
       const tags = node('ul', '', 'shop-tags');
@@ -185,6 +187,7 @@ function renderReservations() {
     if (state.user.role === 'admin') info.append(node('p', `Guest: ${reservation.user?.name || 'Deleted user'} · ${reservation.user?.email || ''} · ${reservation.user?.tel || ''}`));
     if (reservation.notes) { const notes = node('p', '', 'reservation-notes'); notes.append(node('strong', 'Notes: '), node('span', reservation.notes)); info.append(notes); }
     const actions = node('div', '', 'row-actions');
+    reviewUI.reservationAction(reservation, actions);
     actions.append(action('Edit', () => editReservation(reservation)), action('Delete', () => {
       state.deleting = reservation._id; $('#delete-error').textContent = ''; $('#delete-dialog').showModal(); $('#keep-reservation').focus();
     }));
@@ -193,8 +196,9 @@ function renderReservations() {
   updateQuota();
 }
 async function loadReservations() {
-  if (!state.user) { state.reservations = []; renderReservations(); return; }
+  if (!state.user) { state.reservations = []; renderReservations(); await reviewUI.links(); return; }
   const result = await api('/reservations'); state.reservations = result.data; renderReservations();
+  await reviewUI.links();
 }
 function resetBooking() {
   state.editing = null; $('#booking-form').reset(); $('#booking-error').textContent = '';
@@ -351,6 +355,7 @@ function showShopDetails(shop) {
   const list = $('#shop-dialog-details'); list.replaceChildren();
   rows.forEach(([term, value]) => list.append(node('dt', term), node('dd', value)));
   $('#shop-dialog').showModal(); $('#shop-dialog-close').focus();
+  reviewUI.loadShop(shop._id);
 }
 $('#shop-dialog-close').addEventListener('click', () => $('#shop-dialog').close());
 $('#shop-dialog-choose').addEventListener('click', () => { $('#shop-dialog').close(); chooseShop(state.detailShop); });
