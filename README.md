@@ -6,6 +6,8 @@ For the presentation checklist, run `npm run test:postman` or import the collect
 
 Express 5 + MongoDB/Mongoose backend and a responsive, same-origin HTML/CSS/JavaScript interface. Adapted from the existing hospital appointment assignment. Domain code now uses **Reservation**, **MassageShop**, and `/api/v1/reservations`.
 
+Long browser lists use numbered pagination: six shops or ten reservations/reviews per page. Shop search and style filters reset to the first page. Shops and reservations paginate already-loaded data; reviews use the existing server pagination. Run `node --experimental-websocket tests/browser-pagination.js` (desktop) or `node --experimental-websocket tests/browser-pagination.js 390` (mobile) for isolated Chrome fixture checks; set `CHROME_PATH` if Chrome is installed elsewhere. These checks do not connect to Atlas.
+
 ## Quick local demo
 
 Requires Node.js 20.19+ (or Node.js 22+) and npm. The existing Node 20.17 environment also passed the test suite.

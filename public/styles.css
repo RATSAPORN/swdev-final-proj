@@ -335,3 +335,11 @@ textarea::placeholder { color: #69776c; font-size: .82rem; }
 #review-admin > p { max-width: 65ch; }
 @media (max-width: 480px) { .review-recipient-form { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .slot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .line-button { padding: 8px 10px; } }
+/* Shared list navigation */
+.pagination { display: flex; flex-direction: column; gap: 12px; margin-block: 20px; }
+.pagination[hidden] { display: none; }
+.pagination-summary { margin: 0; color: var(--muted); font-size: .875rem; font-variant-numeric: tabular-nums; }
+.pagination nav { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pagination button { min-width: 44px; min-height: 44px; padding: 8px 12px; font-variant-numeric: tabular-nums; }
+.pagination button[aria-current='page'] { background: var(--accent); border-color: var(--accent); color: white; }
+.pagination button:disabled { opacity: .55; cursor: default; }

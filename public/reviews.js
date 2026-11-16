@@ -37,14 +37,17 @@ const reviewUI = (() => {
     $('#shop-rating-summary').textContent = '';
     $('#shop-review-pagination').replaceChildren();
     try {
-      const result = await api(`/shops/${encodeURIComponent(shopId)}/reviews?page=${page}`);
+      const result = await api(`/shops/${encodeURIComponent(shopId)}/reviews?page=${page}&limit=10`);
       if (current !== request || state.detailShop !== shopId) return;
+      const info = pageInfo(result.total, page, result.limit);
+      if (info.page !== page) return await loadShop(shopId, info.page);
       $('#shop-rating-summary').textContent = ratingText(result.averageRating, result.total);
       list.replaceChildren(...result.data.map(reviewArticle));
       if (!result.total) list.append(node('p', 'Be the first to share your experience after your visit.', 'hint'));
       const pagination = $('#shop-review-pagination');
-      if (page > 1) pagination.append(action('Previous reviews', () => loadShop(shopId, page - 1)));
-      if (page * result.limit < result.total) pagination.append(action('More reviews', () => loadShop(shopId, page + 1)));
+      renderPagination(pagination, info, 'reviews', async next => {
+        await loadShop(shopId, next); focusPagination(pagination);
+      });
     } catch (error) {
       if (current !== request) return;
       list.replaceChildren(node('p', error.message, 'error'), action('Retry reviews', () => loadShop(shopId, page)));
@@ -74,8 +77,10 @@ const reviewUI = (() => {
     container.setAttribute('aria-busy', 'true');
     container.replaceChildren(node('p', 'Loading reviews…'));
     try {
-      const result = await api(`/reviews?page=${page}`);
+      const result = await api(`/reviews?page=${page}&limit=10`);
       if (current !== adminRequest || state.user?.role !== 'admin') return;
+      const info = pageInfo(result.total, page, result.limit);
+      if (info.page !== page) return await loadModeration(info.page);
       adminPage = page;
       container.replaceChildren();
       if (!result.data.length) container.append(node('p', 'No reviews on this page.', 'hint'));
@@ -87,11 +92,12 @@ const reviewUI = (() => {
         actions.append(action(review.hidden ? 'Restore' : 'Hide', () => openModeration(review, review.hidden ? 'restore' : 'hide')), action('Delete', () => openModeration(review, 'delete'), 'danger'));
         article.append(actions); container.append(article);
       }
-      const pagination = node('div', '', 'dialog-actions');
-      pagination.append(action('Refresh reviews', () => loadModeration(page)));
-      if (page > 1) pagination.append(action('Previous', () => loadModeration(page - 1)));
-      if (page * result.limit < result.total) pagination.append(action('Next', () => loadModeration(page + 1)));
-      container.append(pagination);
+      const pagination = node('div');
+      renderPagination(pagination, info, 'reviews', async next => {
+        await loadModeration(next);
+        focusPagination(container.querySelector('.pagination'));
+      });
+      container.append(pagination, action('Refresh reviews', () => loadModeration(page)));
     } catch (error) {
       if (current === adminRequest) container.replaceChildren(node('p', error.message, 'error'), action('Retry', () => loadModeration(page)));
     } finally { if (current === adminRequest) container.removeAttribute('aria-busy'); }
