@@ -7,6 +7,7 @@
   <title>Massage Reservation</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/shop-search.js" defer></script>
+  <script src="/pagination.js" defer></script>
   <script src="/reviews.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
@@ -47,6 +48,7 @@
         <div class="filter-bar" role="group" aria-label="Filter by massage style" id="shop-filters"></div>
         <p id="shop-count" class="result-count" role="status">Finding your next favourite…</p>
         <div id="shop-list" aria-live="polite" aria-busy="true"><p class="empty">Finding places to unwind. Just a moment…</p></div>
+        <div id="shop-pagination" hidden></div>
       </section>
       <aside id="booking" class="booking" aria-labelledby="booking-heading">
         <div class="booking-title"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M8 3v4m8-4v4M4 11h16m-11 5 2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><h2 id="booking-heading">Make it a date.</h2></div>
@@ -73,6 +75,7 @@
     <section id="reservations" class="reservations" aria-labelledby="reservation-heading">
       <div class="section-top"><div><h2 id="reservation-heading">Good moments, coming up.</h2><p id="reservation-description">Your reservations, with room for a change of plans.</p></div><button id="refresh-reservations" class="text-button">Refresh reservations</button></div>
       <div id="reservation-list" aria-live="polite"><p class="empty">Log in to see your reservations.</p></div>
+      <div id="reservation-pagination" hidden></div>
     </section>
     <details id="admin-panel" hidden>
       <summary>Add a massage shop</summary>

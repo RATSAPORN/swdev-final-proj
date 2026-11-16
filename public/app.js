@@ -1,5 +1,5 @@
 const $ = selector => document.querySelector(selector);
-const state = { user: null, shops: [], reservations: [], editing: null, deleting: null, register: false, style: '', availabilityRequest: 0, line: null, detailShop: null };
+const state = { user: null, shops: [], reservations: [], shopPage: 1, reservationPage: 1, editing: null, deleting: null, register: false, style: '', availabilityRequest: 0, line: null, detailShop: null };
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const today = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
 $('#booking-form').elements.apptDate.min = today();
@@ -95,14 +95,19 @@ function updateQuota() {
 function renderShops() {
   const list = $('#shop-list'); list.replaceChildren();
   const shops = filterShops(state.shops, $('#shop-search').value, state.style);
+  const info = pageInfo(shops.length, state.shopPage, 6);
+  state.shopPage = info.page;
+  renderPagination($('#shop-pagination'), info, 'shops', page => {
+    state.shopPage = page; renderShops(); focusPagination($('#shop-pagination'));
+  });
   $('#shop-count').textContent = `${shops.length} ${shops.length === 1 ? 'place' : 'places'} to unwind${state.style ? ` · ${state.style}` : ''}`;
   if (!shops.length) {
     const empty = node('div', '', 'empty');
     empty.append(node('h3', state.shops.length ? 'A fresh search, a new possibility.' : 'A little quiet here, for now.'), node('p', state.shops.length ? 'Try a different neighborhood, shop name, or massage style.' : 'Our shop list is empty. Check back soon, or refresh to try again.'));
-    if (state.shops.length) empty.append(action('Show all shops', () => { state.style = ''; $('#shop-search').value = ''; renderFilters(); renderShops(); $('#shop-search').focus(); }));
+    if (state.shops.length) empty.append(action('Show all shops', () => { state.style = ''; state.shopPage = 1; $('#shop-search').value = ''; renderFilters(); renderShops(); $('#shop-search').focus(); }));
     list.append(empty);
   }
-  for (const shop of shops) {
+  for (const shop of shops.slice(info.start, info.end)) {
     const row = node('article', '', 'shop-row');
     const selected = $('#booking-shop').value === shop._id;
     row.dataset.selected = String(selected);
@@ -139,6 +144,7 @@ function renderFilters() {
   for (const style of ['', ...styles]) {
     const button = action(style || 'All shops', () => {
       state.style = style;
+      state.shopPage = 1;
       filters.querySelectorAll('button').forEach(filter => filter.setAttribute('aria-pressed', String(filter.dataset.style === style)));
       renderShops();
     }, 'filter-button');
@@ -166,6 +172,11 @@ async function loadShops() {
 }
 function renderReservations() {
   const list = $('#reservation-list'); list.replaceChildren();
+  const info = pageInfo(state.user ? state.reservations.length : 0, state.reservationPage, 10);
+  state.reservationPage = info.page;
+  renderPagination($('#reservation-pagination'), info, 'reservations', page => {
+    state.reservationPage = page; renderReservations(); focusPagination($('#reservation-pagination'));
+  });
   if (!state.user || !state.reservations.length) {
     const empty = node('div', '', 'empty reservation-empty');
     const copy = node('div');
@@ -174,7 +185,7 @@ function renderReservations() {
     link.href = !state.user ? '#account' : '#shops';
     empty.append(copy, link); list.append(empty);
   }
-  for (const reservation of state.reservations) {
+  for (const reservation of state.reservations.slice(info.start, info.end)) {
     const row = node('article', '', 'reservation-row');
     const date = new Date(`${reservation.apptDate}T12:00:00+07:00`);
     const when = node('div', date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' }), 'reservation-date');
@@ -265,7 +276,7 @@ $('#confirm-delete').addEventListener('click', async () => {
   } catch (error) { $('#delete-error').textContent = error.message; }
   finally { $('#confirm-delete').disabled = false; }
 });
-$('#shop-search').addEventListener('input', renderShops);
+$('#shop-search').addEventListener('input', () => { state.shopPage = 1; renderShops(); });
 $('#booking-shop').addEventListener('change', () => { syncSelectedShop(); renderShops(); loadAvailability(); });
 $('#booking-form').elements.apptDate.addEventListener('change', () => loadAvailability());
 $('#booking-notes').addEventListener('input', updateNotesCount);

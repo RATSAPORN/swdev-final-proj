@@ -3,4 +3,5 @@ process.env.MONGOMS_DOWNLOAD_DIR ||= require('path').join(__dirname, '../.cache/
 require('./regressions.test');
 require('./system.test');
 require('./shop-search.test');
+require('./pagination.test');
 require('./postman-artifacts.test');
